@@ -21,36 +21,38 @@ local PLAYER_CURRENT_LIVES = 0x0487 --Player's current lives count
 local TXT_INCR              = 9      --vertical px text block separation
 
 -- constant values which describe the state of the genetic algorithm
-local MAX_CANDIDATES        = 400    --Number of candidates generated
+local MAX_CANDIDATES        = 100    --Number of candidates generated
 local MAX_CONTROLS_PER_CAND = 1000   --Number of controls that each candidate has
 local FRAME_MAX_PER_CONTROL = 20     --Number of frames that each control will last
-local FH_SELECT_FACTOR		= 1.6	 --GA crossover selection front-heaviness
-local NUM_CH_GEN            = 10     --number of children generated.
-local GA_MUTATION_RATE      = 0.002 --GA mutation rate
+local FH_SELECT_FACTOR		= 1.2	 --GA crossover selection front-heaviness
+local NUM_CH_GEN            = 1     --number of children generated.
+local GA_MUTATION_RATE      = 0.015 --GA mutation rate
 
 -- init savestate & setup rng
 math.randomseed(os.time());
 ss = savestate.create();
 savestate.save(ss);
 
---early test
+
 local candidates = {};
+
+
 --local winning_cand = gen_candidate.new();
---file = io.open("winning_data.txt", "a");
 
 for i=1, MAX_CANDIDATES do
 	local cand = gen_candidate.new();
 	for j = 1, MAX_CONTROLS_PER_CAND do
 		-- we generate L/R first to avoid pushing both at same time!
-		local lrv = random_bool()
+		local lrv = random_bool();
+		local shv = random_bool();
 
 		cand.inputs[j] = { 
 			up      = false,
 			down    = false,
 			left    = lrv,
 			right   = not lrv,
-			A       = random_bool(),
-			B       = random_bool(),
+			A       = shv,
+			B       = not shv,
 			start   = false,
 			select  = false
 			}
@@ -58,7 +60,7 @@ for i=1, MAX_CANDIDATES do
 	candidates[i] = cand;
 end
 
---[[
+--[[--early test stuff
 for i=1, MAX_CANDIDATES do
 	print(ctrl_tbl_btis(candidates[i].inputs[2]));
 end

@@ -54,11 +54,11 @@ for i=1, MAX_CANDIDATES do
 	candidates[i] = cand;
 end
 
---[[
+--[[ GA test stuff
 for i=1, MAX_CANDIDATES do
 	print(ctrl_tbl_btis(candidates[i].inputs[2]));
 end
---]]
+
 
 
 while not contains_winner(candidates) do
@@ -129,4 +129,6 @@ while not contains_winner(candidates) do
 	
 	
 end
+
+--]]
 print("WINNER!");

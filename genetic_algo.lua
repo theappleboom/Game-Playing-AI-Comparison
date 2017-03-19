@@ -32,12 +32,12 @@ function ga_mutate(tbl, count, mutation_rate)
 		for j=1, #(tbl[i].inputs) do
 			if math.random(1, rand_max) == 1 then
 				tbl[i].inputs[j] = { 
-				up      = random_bool(),
-				down    = random_bool(),
+				up      = false,
+				down    = false,
 				left    = lrv,
 				right   = not lrv,
-				A       = random_bool(),
-				B       = random_bool(),
+				A       = shv,
+				B       = not shv,
 				start   = false,
 				select  = false
 				};
