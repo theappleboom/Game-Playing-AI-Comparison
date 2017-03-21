@@ -1,6 +1,6 @@
 require "candidate"
 require "other_utils"
-
+--[[
 function ga_crossover(tbl, count, controls, fhf, ncg)
 	-- kill worst candidate
 	for i=1, ncg do
@@ -25,24 +25,45 @@ function ga_crossover(tbl, count, controls, fhf, ncg)
 		table.insert(tbl, 1, child);
 	end
 end
+--]]
+
+function ga_crossover(tbl, topperc)
+    --extract top x perc from table
+    local top = {};
+    local top_max_ind = math.floor(topperc*(#tbl));
+    local top_max_cont = #(tbl[1].inputs);
+    for i=1, top_max_ind do
+        top[i] = gen_candidate.new();
+        for j=1, top_max_cont do
+            top[i].inputs[j] = deepcopy(tbl[i].inputs[j]);
+        end
+    end
+    --inject new generation into old table
+    local max_cont = #(tbl[1].inputs);
+    for i=1, #tbl do
+        local p1 = math.random(1,top_max_ind);
+        local p2 = math.random(1,top_max_ind);
+        for j = 1, max_cont do
+            local rval = random_bool();
+            if rval then
+                tbl[i].inputs[j] = deepcopy(top[p1].inputs[j]);
+            else
+                tbl[i].inputs[j] = deepcopy(top[p2].inputs[j]);
+            end
+        end
+        tbl[i].been_modified = true;
+    end
+end
+
 
 function ga_mutate(tbl, count, mutation_rate)
-	local rand_max = 1/mutation_rate;
-	for i=1, count do
-		for j=1, #(tbl[i].inputs) do
-			if math.random(1, rand_max) == 1 then
-				tbl[i].inputs[j] = { 
-				up      = false,
-				down    = false,
-				left    = lrv,
-				right   = not lrv,
-				A       = shv,
-				B       = not shv,
-				start   = false,
-				select  = false
-				};
-				tbl[i].been_modified = true;
-			end
-		end
-	end
+    local rand_max = 1/mutation_rate;
+    for i=1, count do
+        for j=1, #(tbl[i].inputs) do
+            if math.random(1, rand_max) == 1 then
+                tbl[i].inputs[j] = generate_input();
+                tbl[i].been_modified = true;
+            end
+        end
+    end
 end
