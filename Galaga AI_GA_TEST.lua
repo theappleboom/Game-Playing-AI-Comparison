@@ -25,8 +25,6 @@ local TXT_INCR              = 9      --vertical px text block separation
 local MAX_CANDIDATES        = 100    --Number of candidates generated
 local MAX_CONTROLS_PER_CAND = 1000   --Number of controls that each candidate has
 local FRAME_MAX_PER_CONTROL = 20     --Number of frames that each control will last
---local FH_SELECT_FACTOR		= 1.2	 --GA crossover selection front-heaviness
---local NUM_CH_GEN            = 1     --number of children generated.
 local GA_SEL_TOPPERC        = .075    --top X percent used for selection/crossover.
 local GA_MUTATION_RATE      = 0.008 --GA mutation rate
 
@@ -36,47 +34,20 @@ ss = savestate.create();
 savestate.save(ss);
 
 
-local candidates = {};
-
-
---local winning_cand = gen_candidate.new();
-
-for i=1, MAX_CANDIDATES do
-	local cand = gen_candidate.new();
-	for j = 1, MAX_CONTROLS_PER_CAND do
-		-- we generate L/R first to avoid pushing both at same time!
-		local lrv = random_bool();
-		local shv = random_bool();
-
-		cand.inputs[j] = { 
-			up      = false,
-			down    = false,
-			left    = lrv,
-			right   = not lrv,
-			A       = shv,
-			B       = not shv,
-			start   = false,
-			select  = false
-			}
-	end
-	candidates[i] = cand;
-end
-
---[[--early test stuff
-for i=1, MAX_CANDIDATES do
-	print(ctrl_tbl_btis(candidates[i].inputs[2]));
-end
---]]
+local candidates = generate_candidates(MAX_CANDIDATES, MAX_CONTROLS_PER_CAND);
+local gen_count = 1;
+local winning_cand = gen_candidate.new();
 
 
 while not contains_winner(candidates) do
 	for curr=1,MAX_CANDIDATES do
 		if candidates[curr].been_modified then
 			savestate.load(ss);
+			local accum = 0;
 			local player_x_val;
 			local cnt = 0;
 			local real_inp = 1;
-			local max_cont = FRAME_MAX_PER_CONTROL * MAX_CONTROLS_PER_CAND
+			local max_cont = FRAME_MAX_PER_CONTROL * MAX_CONTROLS_PER_CAND;
 
 			for i = 1, max_cont do
 				gui.text(0, TXT_INCR * 2, "Cand: "..curr)
@@ -97,18 +68,16 @@ while not contains_winner(candidates) do
 
 				gui.text(0, TXT_INCR * 3, "Fitness: "..score);
 				
+				disp_text(4, "Generation: "..gen_count)
+				
 	        
 				local d_state = memory.readbyte(PLAYER_CURRENT_LIVES);
 				
 				if d_state < 2 then
-					gui.text(0, TXT_INCR * 4, "DYING");
 					break;
-				else
-					gui.text(0, TXT_INCR * 4, "ALIVE");
 				end
 
 				if tonumber(score) >= 30001 then
-					gui.text(0, TXT_INCR * 4, "WINNING");
 					candidates[curr].has_won = true;
 					break;
 				end
@@ -117,11 +86,13 @@ while not contains_winner(candidates) do
 				gui.text(0, TXT_INCR * 5, "Input: "..ctrl_tbl_btis(tbl));
 				gui.text(0, TXT_INCR * 6, "Curr Chromosome: "..real_inp);
 				
-				cnt = cnt + 1;
-				if cnt == FRAME_MAX_PER_CONTROL then
-					cnt = 0;
-					real_inp = real_inp + 1;
-				end
+           cnt = cnt + 1;
+            if cnt == FRAME_MAX_PER_CONTROL then
+                candidates[curr].input_fit[real_inp] = player_x_val - accum;
+                accum = player_x_val;
+                cnt = 0;
+                real_inp = real_inp + 1;
+            end
 				
 				candidates[curr].fitness = score;
 				emu.frameadvance();
@@ -137,11 +108,11 @@ while not contains_winner(candidates) do
 	
 	
 	--ga_crossover
-	--ga_crossover(candidates, MAX_CANDIDATES, MAX_CONTROLS_PER_CAND, FH_SELECT_FACTOR, NUM_CH_GEN);
 	ga_crossover(candidates, GA_SEL_TOPPERC);
 	--ga_mutate
 	ga_mutate(candidates, MAX_CANDIDATES, GA_MUTATION_RATE);
 	
+    gen_count = gen_count + 1;
 	
 end
 print("WINNER!");
