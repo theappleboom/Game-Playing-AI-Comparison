@@ -22,7 +22,7 @@ local PLAYER_CURRENT_LIVES = 0x0487 --Player's current lives count
 local TXT_INCR              = 9      --vertical px text block separation
 
 -- constant values which describe the state of the genetic algorithm
-local MAX_CANDIDATES        = 100    --Number of candidates generated
+local MAX_CANDIDATES        = 200    --Number of candidates generated
 local MAX_CONTROLS_PER_CAND = 1000   --Number of controls that each candidate has
 local FRAME_MAX_PER_CONTROL = 20     --Number of frames that each control will last
 local GA_SEL_TOPPERC        = .075    --top X percent used for selection/crossover.
@@ -54,7 +54,8 @@ while not contains_winner(candidates) do
 
 				joypad.set(1, candidates[curr].inputs[real_inp]);
 
-				--player_x_val = memory.readbyte(PLAYER_XPOS);
+				player_x_val = memory.readbyte(PLAYER_XPOS);
+				gui.text(0, TXT_INCR * 1, "player x val: "..player_x_val);
 				
 				score = tonumber(memory.readbyte(SCORE_FIRST_DIGIT)..
 					memory.readbyte(SCORE_SECOND_DIGIT)..
@@ -68,7 +69,7 @@ while not contains_winner(candidates) do
 
 				gui.text(0, TXT_INCR * 3, "Fitness: "..score);
 				
-				disp_text(4, "Generation: "..gen_count)
+				gui.text(0, TXT_INCR *4, "Generation: "..gen_count)
 				
 	        
 				local d_state = memory.readbyte(PLAYER_CURRENT_LIVES);
@@ -88,8 +89,8 @@ while not contains_winner(candidates) do
 				
            cnt = cnt + 1;
             if cnt == FRAME_MAX_PER_CONTROL then
-                candidates[curr].input_fit[real_inp] = player_x_val - accum;
-                accum = player_x_val;
+                candidates[curr].input_fit[real_inp] = score - accum;
+                accum = score;
                 cnt = 0;
                 real_inp = real_inp + 1;
             end

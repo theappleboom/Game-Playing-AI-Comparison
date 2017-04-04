@@ -29,35 +29,7 @@ math.randomseed(os.time());
 ss = savestate.create();
 savestate.save(ss);
 
---early test
 local candidates = {};
---local winning_cand = gen_candidate.new();
---file = io.open("winning_data.txt", "a");
-
-for i=1, MAX_CANDIDATES do
-	local cand = gen_candidate.new();
-	for j = 1, MAX_CONTROLS_PER_CAND do
-		-- we generate L/R first to avoid pushing both at same time!
-		local lrv = random_bool()
-
-		cand.inputs[j] = { 
-			up      = false,
-			down    = false,
-			left    = lrv,
-			right   = not lrv,
-			A       = random_bool(),
-			B       = random_bool(),
-			start   = false,
-			select  = false
-			}
-	end
-	candidates[i] = cand;
-end
-
---[[ GA test stuff
-for i=1, MAX_CANDIDATES do
-	print(ctrl_tbl_btis(candidates[i].inputs[2]));
-end
 
 
 
@@ -131,5 +103,4 @@ while not contains_winner(candidates) do
 end
 
 --]]
-
 print("WINNER!");
