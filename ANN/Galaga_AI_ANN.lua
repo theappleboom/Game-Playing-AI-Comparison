@@ -127,9 +127,6 @@ function getInputs()
 		end
 	end
 	
-	--mariovx = memory.read_s8(0x7B)
-	--mariovy = memory.read_s8(0x7D)
-	
 	return inputs
 end
 
@@ -721,7 +718,7 @@ function addToSpecies(child)
 end
 
 function newGeneration()
-	cullSpecies(false) -- Cull the bottom half of each species
+	cullSpecies(false) --bottom
 	rankGlobally()
 	removeStaleSpecies()
 	rankGlobally()
@@ -739,7 +736,7 @@ function newGeneration()
 			table.insert(children, breedChild(species))
 		end
 	end
-	cullSpecies(true) -- Cull all but the top member of each species
+	cullSpecies(true) --top
 	while #children + #pool.species < Population do
 		local species = pool.species[math.random(1, #pool.species)]
 		table.insert(children, breedChild(species))
