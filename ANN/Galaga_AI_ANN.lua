@@ -1,34 +1,33 @@
--- Main File
--- Info:    [here]
--- Authors: [here]
--- Date:    [here]
+-- Implementation of NN based on the NEAT algorithm and work done by SethBling in his Mario AI implementation
 
---NEEDS TO BE REWORKED FOR GALAGA. NEED SPRITE INFORMATION, COORDINATES, ETC.
+--Works for SMB on FCEUX Emulator(WIP), Needs to be reworked for Galaga. RAM information for galaga is less readily
+--available then for SMB, testing on SMB first. NEED SPRITE INFORMATION FOR GALAGA
 
-require "NN"
+	ss = savestate.create();
+	--ss = "ss.State"
+	savestate.save(ss)
+	ButtonNames = {
+		"A",
+		"B",
+		"up",
+		"down",
+		"left",
+		"right",
+	}
 
--- constant values, memory locations & other useful things
-local SCORE_FIRST_DIGIT = 0x00E0 -- Score: 9xxxxxx
-local SCORE_SECOND_DIGIT = 0x00E1 -- Score: x9xxxxx
-local SCORE_THIRD_DIGIT = 0x00E2 -- Score: xx9xxxx
-local SCORE_FOURTH_DIGIT = 0x00E3 -- Score: xxx9xxx
-local SCORE_FIFTH_DIGIT = 0x00E4 -- Score: xxxx9xx
-local SCORE_SIXTH_DIGIT = 0x00E5 -- Score: xxxxx9x
-local SCORE_SEVENTH_DIGIT = 0x00E6 -- Score: xxxxxx9
-local PLAYER_XPOS = 0x0203 -- Player's x position
-local PLAYER_CURRENT_LIVES = 0x0487 --Player's current lives count
-local TXT_INCR              = 9      --vertical px text block separation
-
---Neural Net Info & General Info
 BoxRadius = 6
 InputSize = (BoxRadius*2+1)*(BoxRadius*2+1)
+
 Inputs = InputSize+1
 Outputs = #ButtonNames
+
 Population = 300
 DeltaDisjoint = 2.0
 DeltaWeights = 0.4
 DeltaThreshold = 1.0
+
 StaleSpecies = 15
+
 MutateConnectionsChance = 0.25
 PerturbChance = 0.90
 CrossoverChance = 0.75
@@ -38,37 +37,22 @@ BiasMutationChance = 0.40
 StepSize = 0.1
 DisableMutationChance = 0.4
 EnableMutationChance = 0.2
+
 TimeoutConstant = 20
+
 MaxNodes = 1000000
 
-
--- init savestate & setup rng
-math.randomseed(os.time());
-ss = savestate.create();
-savestate.save(ss);
-
-	ButtonNames = {
-		"left",
-		"right",
-		"A",
-		"B",
-	}
-
-	--Set up inputs and outputs
-	
 function getPositions()
 
-		galagaX = PLAYER_XPOS;
+		marioX = memory.readbyte(0x6D) * 0x100 + memory.readbyte(0x86)
+		marioY = memory.readbyte(0x03B8)+16
+	
+		screenX = memory.readbyte(0x03AD)
+		screenY = memory.readbyte(0x03B8)
+	
 end
 
-
 function getTile(dx, dy)
-	if gameinfo.getromname() == "Super Mario World (USA)" then
-		x = math.floor((marioX+dx+8)/16)
-		y = math.floor((marioY+dy)/16)
-		
-		return memory.readbyte(0x1C800 + math.floor(x/0x10)*0x1B0 + y*0x10 + x%0x10)
-	elseif gameinfo.getromname() == "Super Mario Bros." then
 		local x = marioX + dx + 8
 		local y = marioY + dy - 16
 		local page = math.floor(x/256)%2
@@ -86,23 +70,9 @@ function getTile(dx, dy)
 		else
 			return 0
 		end
-	end
 end
 
 function getSprites()
-	if gameinfo.getromname() == "Super Mario World (USA)" then
-		local sprites = {}
-		for slot=0,11 do
-			local status = memory.readbyte(0x14C8+slot)
-			if status ~= 0 then
-				spritex = memory.readbyte(0xE4+slot) + memory.readbyte(0x14E0+slot)*256
-				spritey = memory.readbyte(0xD8+slot) + memory.readbyte(0x14D4+slot)*256
-				sprites[#sprites+1] = {["x"]=spritex, ["y"]=spritey}
-			end
-		end		
-		
-		return sprites
-	elseif gameinfo.getromname() == "Super Mario Bros." then
 		local sprites = {}
 		for slot=0,4 do
 			local enemy = memory.readbyte(0xF+slot)
@@ -114,25 +84,12 @@ function getSprites()
 		end
 		
 		return sprites
-	end
+
 end
 
 function getExtendedSprites()
-	if gameinfo.getromname() == "Super Mario World (USA)" then
-		local extended = {}
-		for slot=0,11 do
-			local number = memory.readbyte(0x170B+slot)
-			if number ~= 0 then
-				spritex = memory.readbyte(0x171F+slot) + memory.readbyte(0x1733+slot)*256
-				spritey = memory.readbyte(0x1715+slot) + memory.readbyte(0x1729+slot)*256
-				extended[#extended+1] = {["x"]=spritex, ["y"]=spritey}
-			end
-		end		
-		
-		return extended
-	elseif gameinfo.getromname() == "Super Mario Bros." then
 		return {}
-	end
+	
 end
 
 function getInputs()
@@ -170,11 +127,12 @@ function getInputs()
 		end
 	end
 	
+	--mariovx = memory.read_s8(0x7B)
+	--mariovy = memory.read_s8(0x7D)
 	
 	return inputs
 end
 
---Neural Net
 function sigmoid(x)
 	return 2/(1+math.exp(-4.9*x))-1
 end
@@ -341,7 +299,7 @@ function evaluateNetwork(network, inputs)
 	
 	local outputs = {}
 	for o=1,Outputs do
-		local button = "P1 " .. ButtonNames[o]
+		local button = ButtonNames[o]
 		if network.neurons[MaxNodes+o].value > 0 then
 			outputs[button] = true
 		else
@@ -410,6 +368,7 @@ function randomNeuron(genes, nonInput)
 	for _,_ in pairs(neurons) do
 		count = count + 1
 	end
+	
 	local n = math.random(1, count)
 	
 	for k,v in pairs(neurons) do
@@ -792,12 +751,8 @@ function newGeneration()
 	
 	pool.generation = pool.generation + 1
 	
-	writeFile("backup." .. pool.generation .. "." .. forms.gettext(saveLoadFile))
 end
 	
-
-	
-	--RUN
 function initializePool()
 	pool = newPool()
 
@@ -812,13 +767,13 @@ end
 function clearJoypad()
 	controller = {}
 	for b = 1,#ButtonNames do
-		controller["P1 " .. ButtonNames[b]] = false
+		controller[ButtonNames[b]] = false
 	end
-	joypad.set(controller)
+	joypad.set(1, controller)
 end
 
 function initializeRun()
-	savestate.load(Filename);
+	savestate.load(ss);
 	rightmost = 0
 	pool.currentFrame = 0
 	timeout = TimeoutConstant
@@ -837,16 +792,16 @@ function evaluateCurrent()
 	inputs = getInputs()
 	controller = evaluateNetwork(genome.network, inputs)
 	
-	if controller["P1 Left"] and controller["P1 Right"] then
-		controller["P1 Left"] = false
-		controller["P1 Right"] = false
+	if controller["left"] and controller["right"] then
+		controller["left"] = false
+		controller["right"] = false
 	end
-	if controller["P1 Up"] and controller["P1 Down"] then
-		controller["P1 Up"] = false
-		controller["P1 Down"] = false
+	if controller["up"] and controller["down"] then
+		controller["up"] = false
+		controller["down"] = false
 	end
 
-	joypad.set(controller)
+	joypad.set(1, controller)
 end
 
 if pool == nil then
@@ -906,7 +861,7 @@ function displayGenome(genome)
 		else
 			color = 0xFF000000
 		end
-		gui.drawText(223, 24+8*o, ButtonNames[o], color, 9)
+		gui.drawtext(223, 24+8*o, ButtonNames[o], "#000000ff", 9)
 	end
 	
 	for n,neuron in pairs(network.neurons) do
@@ -956,7 +911,7 @@ function displayGenome(genome)
 		end
 	end
 	
-	gui.drawBox(50-BoxRadius*5-3,70-BoxRadius*5-3,50+BoxRadius*5+2,70+BoxRadius*5+2,0xFF000000, 0x80808080)
+	gui.drawbox(50-BoxRadius*5-3,70-BoxRadius*5-3,50+BoxRadius*5+2,70+BoxRadius*5+2, "#80808080", "#000000FF")
 	for n,cell in pairs(cells) do
 		if n > Inputs or cell.value ~= 0 then
 			local color = math.floor((cell.value+1)/2*256)
@@ -967,7 +922,7 @@ function displayGenome(genome)
 				opacity = 0x50000000
 			end
 			color = opacity + color*0x10000 + color*0x100 + color
-			gui.drawBox(cell.x-2,cell.y-2,cell.x+2,cell.y+2,opacity,color)
+			gui.drawbox(cell.x-2,cell.y-2,cell.x+2,cell.y+2,opacity,color)
 		end
 	end
 	for _,gene in pairs(genome.genes) do
@@ -985,174 +940,30 @@ function displayGenome(genome)
 			else
 				color = opacity + 0x800000 + 0x100*color
 			end
-			gui.drawLine(c1.x+1, c1.y, c2.x-3, c2.y, color)
-		end
-	end
-	
-	gui.drawBox(49,71,51,78,0x00000000,0x80FF0000)
-	
-	if forms.ischecked(showMutationRates) then
-		local pos = 100
-		for mutation,rate in pairs(genome.mutationRates) do
-			gui.drawText(100, pos, mutation .. ": " .. rate, 0xFF000000, 10)
-			pos = pos + 8
-		end
-	end
-end
-
-function writeFile(filename)
-        local file = io.open(filename, "w")
-	file:write(pool.generation .. "\n")
-	file:write(pool.maxFitness .. "\n")
-	file:write(#pool.species .. "\n")
-        for n,species in pairs(pool.species) do
-		file:write(species.topFitness .. "\n")
-		file:write(species.staleness .. "\n")
-		file:write(#species.genomes .. "\n")
-		for m,genome in pairs(species.genomes) do
-			file:write(genome.fitness .. "\n")
-			file:write(genome.maxneuron .. "\n")
-			for mutation,rate in pairs(genome.mutationRates) do
-				file:write(mutation .. "\n")
-				file:write(rate .. "\n")
-			end
-			file:write("done\n")
 			
-			file:write(#genome.genes .. "\n")
-			for l,gene in pairs(genome.genes) do
-				file:write(gene.into .. " ")
-				file:write(gene.out .. " ")
-				file:write(gene.weight .. " ")
-				file:write(gene.innovation .. " ")
-				if(gene.enabled) then
-					file:write("1\n")
-				else
-					file:write("0\n")
-				end
-			end
-		end
-        end
-        file:close()
-end
-
-function savePool()
-	local filename = forms.gettext(saveLoadFile)
-	writeFile(filename)
-end
-
-function loadFile(filename)
-        local file = io.open(filename, "r")
-	pool = newPool()
-	pool.generation = file:read("*number")
-	pool.maxFitness = file:read("*number")
-	forms.settext(maxFitnessLabel, "Max Fitness: " .. math.floor(pool.maxFitness))
-        local numSpecies = file:read("*number")
-        for s=1,numSpecies do
-		local species = newSpecies()
-		table.insert(pool.species, species)
-		species.topFitness = file:read("*number")
-		species.staleness = file:read("*number")
-		local numGenomes = file:read("*number")
-		for g=1,numGenomes do
-			local genome = newGenome()
-			table.insert(species.genomes, genome)
-			genome.fitness = file:read("*number")
-			genome.maxneuron = file:read("*number")
-			local line = file:read("*line")
-			while line ~= "done" do
-				genome.mutationRates[line] = file:read("*number")
-				line = file:read("*line")
-			end
-			local numGenes = file:read("*number")
-			for n=1,numGenes do
-				local gene = newGene()
-				table.insert(genome.genes, gene)
-				local enabled
-				gene.into, gene.out, gene.weight, gene.innovation, enabled = file:read("*number", "*number", "*number", "*number", "*number")
-				if enabled == 0 then
-					gene.enabled = false
-				else
-					gene.enabled = true
-				end
-				
-			end
-		end
-	end
-        file:close()
-	
-	while fitnessAlreadyMeasured() do
-		nextGenome()
-	end
-	initializeRun()
-	pool.currentFrame = pool.currentFrame + 1
-end
- 
-function loadPool()
-	local filename = forms.gettext(saveLoadFile)
-	loadFile(filename)
-end
-
-function playTop()
-	local maxfitness = 0
-	local maxs, maxg
-	for s,species in pairs(pool.species) do
-		for g,genome in pairs(species.genomes) do
-			if genome.fitness > maxfitness then
-				maxfitness = genome.fitness
-				maxs = s
-				maxg = g
-			end
+			gui.drawline(c1.x+1, c1.y, c2.x-3, c2.y, color)
 		end
 	end
 	
-	pool.currentSpecies = maxs
-	pool.currentGenome = maxg
-	pool.maxFitness = maxfitness
-	forms.settext(maxFitnessLabel, "Max Fitness: " .. math.floor(pool.maxFitness))
-	initializeRun()
-	pool.currentFrame = pool.currentFrame + 1
-	return
-end
-
-function onExit()
-	forms.destroy(form)
-end
-
-writeFile("temp.pool")
-
-event.onexit(onExit)
-
-form = forms.newform(200, 260, "Fitness")
-maxFitnessLabel = forms.label(form, "Max Fitness: " .. math.floor(pool.maxFitness), 5, 8)
-showNetwork = forms.checkbox(form, "Show Map", 5, 30)
-showMutationRates = forms.checkbox(form, "Show M-Rates", 5, 52)
-restartButton = forms.button(form, "Restart", initializePool, 5, 77)
-saveButton = forms.button(form, "Save", savePool, 5, 102)
-loadButton = forms.button(form, "Load", loadPool, 80, 102)
-saveLoadFile = forms.textbox(form, Filename .. ".pool", 170, 25, nil, 5, 148)
-saveLoadLabel = forms.label(form, "Save/Load:", 5, 129)
-playTopButton = forms.button(form, "Play Top", playTop, 5, 170)
-hideBanner = forms.checkbox(form, "Hide Banner", 5, 190)
-
+	gui.drawbox(49,71,51,78,"#FF000080","#00000000")
+	
+ end
 
 while true do
-	local backgroundColor = 0xD0FFFFFF
-	if not forms.ischecked(hideBanner) then
-		gui.drawBox(0, 0, 300, 26, backgroundColor, backgroundColor)
-	end
+	local backgroundColor = "#D0FFFFFF"
+		gui.drawbox(0, 0, 300, 26, backgroundColor, backgroundColor)
+	
 
 	local species = pool.species[pool.currentSpecies]
 	local genome = species.genomes[pool.currentGenome]
 	
-	if forms.ischecked(showNetwork) then
 		displayGenome(genome)
-	end
 	
 	if pool.currentFrame%5 == 0 then
 		evaluateCurrent()
 	end
 
-	joypad.set(controller)
+	joypad.set(1, controller)
 
 	getPositions()
 	if marioX > rightmost then
@@ -1166,10 +977,7 @@ while true do
 	local timeoutBonus = pool.currentFrame / 4
 	if timeout + timeoutBonus <= 0 then
 		local fitness = rightmost - pool.currentFrame / 2
-		if gameinfo.getromname() == "Super Mario World (USA)" and rightmost > 4816 then
-			fitness = fitness + 1000
-		end
-		if gameinfo.getromname() == "Super Mario Bros." and rightmost > 3186 then
+		if rightmost > 3186 then
 			fitness = fitness + 1000
 		end
 		if fitness == 0 then
@@ -1179,11 +987,9 @@ while true do
 		
 		if fitness > pool.maxFitness then
 			pool.maxFitness = fitness
-			forms.settext(maxFitnessLabel, "Max Fitness: " .. math.floor(pool.maxFitness))
-			writeFile("backup." .. pool.generation .. "." .. forms.gettext(saveLoadFile))
 		end
 		
-		console.writeline("Gen " .. pool.generation .. " species " .. pool.currentSpecies .. " genome " .. pool.currentGenome .. " fitness: " .. fitness)
+		print("Gen " .. pool.generation .. " species " .. pool.currentSpecies .. " genome " .. pool.currentGenome .. " fitness: " .. fitness)
 		pool.currentSpecies = 1
 		pool.currentGenome = 1
 		while fitnessAlreadyMeasured() do
@@ -1202,11 +1008,11 @@ while true do
 			end
 		end
 	end
-	if not forms.ischecked(hideBanner) then
-		gui.drawText(0, 0, "Gen " .. pool.generation .. " species " .. pool.currentSpecies .. " genome " .. pool.currentGenome .. " (" .. math.floor(measured/total*100) .. "%)", 0xFF000000, 11)
-		gui.drawText(0, 12, "Fitness: " .. math.floor(rightmost - (pool.currentFrame) / 2 - (timeout + timeoutBonus)*2/3), 0xFF000000, 11)
-		gui.drawText(100, 12, "Max Fitness: " .. math.floor(pool.maxFitness), 0xFF000000, 11)
-	end
+
+		gui.drawtext(0, 20, "Gen " .. pool.generation .. " species " .. pool.currentSpecies .. " genome " .. pool.currentGenome .. " (" .. math.floor(measured/total*100) .. "%)", 0xFF, "clear")
+		gui.drawtext(0, 12, "Fitness: " .. math.floor(rightmost - (pool.currentFrame) / 2 - (timeout + timeoutBonus)*2/3), 0xFF, "clear")
+		gui.drawtext(100, 12, "Max Fitness: " .. math.floor(pool.maxFitness), 0xFF, "clear")
+
 		
 	pool.currentFrame = pool.currentFrame + 1
 
