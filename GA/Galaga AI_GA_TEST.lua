@@ -1,5 +1,5 @@
 -- Main File
--- Info:    This code created by AI team Austin Auger (Lead), Michael Tillett, Catherine Dougherty
+-- Info:    This code created by AI team Austin Auger, Michael Tillett, Catherine Dougherty
 --for use in a similar project. This skeleton is being used as a test for implementation of a 
 --Artificial Neural Network and most if not all code present will not be used.
 --All below required files were created by the same team.
