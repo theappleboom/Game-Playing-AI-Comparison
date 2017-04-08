@@ -6,6 +6,7 @@
 require "table_utils"
 require "other_utils"
 require "candidate"
+require "Q_Algo"
 
 -- constant values, memory locations & other useful things
 local SCORE_FIRST_DIGIT = 0x00E0 -- Score: 9xxxxxx
@@ -98,6 +99,8 @@ while not contains_winner(candidates) do
 	--sort
 	table.sort(candidates, function(a, b) return a.fitness > b.fitness end);
 	print(candidates[1].fitness);
+	
+	--Add methods for Q-learning algo from Q-learning algo file here!!!
 	
 	
 end
