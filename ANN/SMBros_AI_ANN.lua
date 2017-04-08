@@ -919,7 +919,7 @@ function displayGenome(genome)
 				opacity = 0x50000000
 			end
 			color = opacity + color*0x10000 + color*0x100 + color
-			gui.drawbox(cell.x-2,cell.y-2,cell.x+2,cell.y+2,opacity,color)
+			gui.drawbox(cell.x-2,cell.y-2,cell.x+2,cell.y+2,"white","black")
 		end
 	end
 	for _,gene in pairs(genome.genes) do
